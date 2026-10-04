@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Email Calendar Sync</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+
+        .dashboard-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .dashboard-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .refresh-button {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 9px 14px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .refresh-button:hover {
+            background: #3367d6;
+        }
+
+        /* STATS */
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .stat-number {
+            display: block;
+            font-size: 25px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* SEARCH + FILTER */
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 11px 13px;
+            border: 1px solid #ccd3e0;
+            border-radius: 7px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #4285f4;
+        }
+
+        .filter-button {
+            border: none;
+            padding: 10px 13px;
+            border-radius: 7px;
+            cursor: pointer;
+            background: #e9edf5;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .filter-button.active {
+            background: #4285f4;
+            color: white;
+        }
+
+        /* DRAFT */
+
+        .draft-box {
+            display: none;
+            margin-top: 8px;
+            padding: 10px;
+            background: #f5f7ff;
+            border: 1px solid #d5dcff;
+            border-radius: 8px;
+            text-align: left;
+            width: 320px;
+            max-width: 320px;
+            box-sizing: border-box;
+        }
+
+        .draft-box strong {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .draft-button {
+            margin-top: 6px;
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .draft-button:hover {
+            background: #3367d6;
+        }
+
+        .reply-textarea {
+            display: block;
+            width: 100%;
+            height: 120px;
+            min-height: 120px;
+            max-height: 120px;
+            padding: 10px;
+            border: 1px solid #c9d2ff;
+            border-radius: 7px;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            resize: none;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .reply-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .save-draft-button,
+        .send-reply-button {
+            border: none;
+            padding: 8px 11px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .save-draft-button {
+            background: #f1c40f;
+            color: #222;
+        }
+
+        .send-reply-button {
+            background: #27ae60;
+            color: white;
+        }
+
+        /* MEETING */
+
+        .meeting-box {
+            background: #e8f5e9;
+            border: 1px solid #b7dfb9;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            line-height: 1.6;
+            min-width: 150px;
+        }
+
+        .meeting-title {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .meeting-date,
+        .meeting-time {
+            font-size: 14px;
+        }
+
+        .calendar-status {
+            margin-top: 6px;
+        }
+
+        @media (max-width: 900px) {
+            .stats-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        /* =========================================================
+   GEMINI CHATBOT
+========================================================= */
+
+.gemini-chat-button {
+    position: fixed;
+    right: 25px;
+    bottom: 25px;
+    width: 62px;
+    height: 62px;
+    border: none;
+    border-radius: 50%;
+    background: #4285f4;
+    color: white;
+    font-size: 27px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+    z-index: 9999;
+}
+
+.gemini-chat-button:hover {
+    transform: scale(1.05);
+}
+
+
+/* Chat window */
+
+.gemini-chat {
+    display: none;
+
+    position: fixed;
+    right: 25px;
+    bottom: 100px;
+
+    width: 390px;
+    height: 570px;
+
+    background: white;
+
+    border-radius: 18px;
+
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.25);
+
+    overflow: hidden;
+
+    z-index: 9998;
+
+    flex-direction: column;
+}
+
+
+/* Header */
+
+.gemini-chat-header {
+    background: #4285f4;
+    color: white;
+
+    padding: 15px 17px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gemini-chat-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gemini-chat-icon {
+    font-size: 25px;
+}
+
+.gemini-chat-name {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.gemini-chat-status {
+    font-size: 11px;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+.gemini-close {
+    border: none;
+    background: transparent;
+    color: white;
+    font-size: 25px;
+    cursor: pointer;
+}
+
+
+/* Messages */
+
+.gemini-messages {
+    flex: 1;
+
+    padding: 15px;
+
+    overflow-y: auto;
+
+    background: #f7f8fc;
+}
+
+.gemini-message {
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.gemini-message.user {
+    justify-content: flex-end;
+}
+
+.gemini-message.assistant {
+    justify-content: flex-start;
+}
+
+.gemini-bubble {
+    max-width: 82%;
+
+    padding: 10px 13px;
+
+    border-radius: 14px;
+
+    font-size: 14px;
+
+    line-height: 1.45;
+
+    white-space: pre-wrap;
+
+    word-wrap: break-word;
+}
+
+.gemini-message.user .gemini-bubble {
+    background: #4285f4;
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.gemini-message.assistant .gemini-bubble {
+    background: white;
+    color: #222;
+    border: 1px solid #e1e4ea;
+    border-bottom-left-radius: 4px;
+}
+
+
+/* Thinking */
+
+.gemini-thinking {
+    display: none;
+
+    padding: 0 15px 8px;
+
+    color: #777;
+
+    font-size: 12px;
+}
+
+
+/* Input */
+
+.gemini-input-area {
+    display: flex;
+
+    gap: 8px;
+
+    padding: 10px;
+
+    border-top: 1px solid #e1e4ea;
+
+    background: white;
+}
+
+.gemini-input {
+    flex: 1;
+
+    padding: 10px 14px;
+
+    border: 1px solid #ccd3e0;
+
+    border-radius: 22px;
+
+    outline: none;
+
+    font-size: 14px;
+}
+
+.gemini-input:focus {
+    border-color: #4285f4;
+}
+
+.gemini-send {
+    width: 44px;
+    height: 44px;
+
+    border: none;
+
+    border-radius: 50%;
+
+    background: #4285f4;
+
+    color: white;
+
+    font-size: 17px;
+
+    cursor: pointer;
+}
+
+.gemini-send:disabled {
+    background: #aebbd0;
+    cursor: not-allowed;
+}
+
+
+/* Mobile */
+
+@media (max-width: 600px) {
+
+    .gemini-chat {
+        right: 10px;
+        bottom: 85px;
+
+        width: calc(100vw - 20px);
+
+        height: 70vh;
+    }
+
+    .gemini-chat-button {
+        right: 15px;
+        bottom: 15px;
+    }
+}
+
+    </style>
+</head>
+
+
+<body>
+
+<header class="header">
+
+    <h1>
+        Automated Email & Calendar Sync
+    </h1>
+
+    <p>
+        Read emails, find meetings, and stay organized.
+    </p>
+
+</header>
+
+
+<main class="container">
+
+    <div class="dashboard-top">
+
+        <h2>
+            Latest Gmail Emails
+        </h2>
+
+        <div class="dashboard-actions">
+
+            {% if gmail_connected %}
+
+                <span class="badge badge-normal">
+                    Gmail Connected
+                </span>
+
+                <button
+                    type="button"
+                    class="refresh-button"
+                    onclick="location.reload()">
+                    🔄 Refresh
+                </button>
+
+                <a href="{{ url_for('logout') }}">
+                    Disconnect Gmail
+                </a>
+
+            {% else %}
+
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    {% if gmail_connected and emails %}
+
+        <!-- STATS -->
+
+        {% set total_emails = emails|length %}
+
+        {% set important_count = emails
+            |selectattr('important')
+            |list
+            |length
+        %}
+
+        {% set meeting_count = emails
+            |selectattr('meeting_detected')
+            |list
+            |length
+        %}
+
+        {% set draft_count = emails
+            |selectattr('draft_reply')
+            |list
+            |length
+        %}
+
+        {% set added_count = emails
+            |selectattr('calendar_status', 'equalto', 'Added')
+            |list
+            |length
+        %}
+
+
+        <div class="stats-container">
+
+            <div class="stat-card">
+                <span class="stat-number">
+                    {{ total_emails }}
+                </span>
+                <span class="stat-label">
+                    Total Emails
+                </span>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-number">
+                    {{ important_count }}
+                </span>
+                <span class="stat-label">
+                    Important
+                </span>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-number">
+                    {{ meeting_count }}
+                </span>
+                <span class="stat-label">
+                    Meetings
+                </span>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-number">
+                    {{ draft_count }}
+                </span>
+                <span class="stat-label">
+                    Drafts
+                </span>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-number">
+                    {{ added_count }}
+                </span>
+                <span class="stat-label">
+                    Calendar Added
+                </span>
+            </div>
+
+        </div>
+
+
+        <!-- SEARCH + FILTER -->
+
+        <div class="toolbar">
+
+            <input
+                type="text"
+                id="searchInput"
+                class="search-input"
+                placeholder="🔍 Search subject, sender or email..."
+                oninput="filterEmails()"
+            >
+
+            <button
+                type="button"
+                class="filter-button active"
+                onclick="setFilter('all', this)">
+                All
+            </button>
+
+            <button
+                type="button"
+                class="filter-button"
+                onclick="setFilter('important', this)">
+                Important
+            </button>
+
+            <button
+                type="button"
+                class="filter-button"
+                onclick="setFilter('meeting', this)">
+                Meetings
+            </button>
+
+            <button
+                type="button"
+                class="filter-button"
+                onclick="setFilter('normal', this)">
+                Normal
+            </button>
+
+        </div>
+
+
+        <!-- EMAIL TABLE -->
+
+        <table class="email-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>#</th>
+                    <th>Subject</th>
+                    <th>Sender</th>
+                    <th>Date / Time</th>
+                    <th>Email</th>
+                    <th>Importance</th>
+                    <th>Calendar</th>
+                    <th>Draft Reply</th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+                {% for email in emails %}
+
+                <tr
+                    class="email-row"
+                    data-important="{{ 'true' if email.important else 'false' }}"
+                    data-meeting="{{ 'true' if email.meeting_detected else 'false' }}"
+                >
+
+                    <td>
+                        {{ loop.index }}
+                    </td>
+
+
+                    <td>
+                        {{ email.subject }}
+                    </td>
+
+
+                    <td>
+                        {{ email.sender }}
+                    </td>
+
+
+                    <td>
+                        {{ email.date }}
+                    </td>
+
+
+                    <td>
+
+                        <div style="max-width:350px;">
+                            {{ email.snippet }}
+                        </div>
+
+                    </td>
+
+
+                    <td>
+
+                        {% if email.important %}
+
+                            <span class="badge badge-important">
+                                Important
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge badge-normal">
+                                Normal
+                            </span>
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <td>
+
+                        {% if email.meeting_detected and email.meeting_start %}
+
+                            <div class="meeting-box">
+
+                                <div class="meeting-title">
+                                    📅 Meeting
+                                </div>
+
+
+                                {% set date_parts =
+                                    email.meeting_start[:10].split('-')
+                                %}
+
+
+                                <div class="meeting-date">
+
+                                    <strong>Date:</strong>
+
+                                    {{ date_parts[2] }}
+
+                                    {% if date_parts[1] == '01' %}
+                                        January
+                                    {% elif date_parts[1] == '02' %}
+                                        February
+                                    {% elif date_parts[1] == '03' %}
+                                        March
+                                    {% elif date_parts[1] == '04' %}
+                                        April
+                                    {% elif date_parts[1] == '05' %}
+                                        May
+                                    {% elif date_parts[1] == '06' %}
+                                        June
+                                    {% elif date_parts[1] == '07' %}
+                                        July
+                                    {% elif date_parts[1] == '08' %}
+                                        August
+                                    {% elif date_parts[1] == '09' %}
+                                        September
+                                    {% elif date_parts[1] == '10' %}
+                                        October
+                                    {% elif date_parts[1] == '11' %}
+                                        November
+                                    {% elif date_parts[1] == '12' %}
+                                        December
+                                    {% endif %}
+
+                                    {{ date_parts[0] }}
+
+                                </div>
+
+
+                                <div class="meeting-time">
+
+                                    <strong>Time:</strong>
+
+                                    {% set time_parts =
+                                        email.meeting_start[11:16].split(':')
+                                    %}
+
+                                    {% set hour = time_parts[0]|int %}
+
+                                    {% set minute = time_parts[1] %}
+
+
+                                    {% if hour == 0 %}
+
+                                        12:{{ minute }} AM
+
+                                    {% elif hour < 12 %}
+
+                                        {{ hour }}:{{ minute }} AM
+
+                                    {% elif hour == 12 %}
+
+                                        12:{{ minute }} PM
+
+                                    {% else %}
+
+                                        {{ hour - 12 }}:{{ minute }} PM
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+
+                        <div class="calendar-status">
+
+                            <span class="badge badge-status">
+                                {{ email.calendar_status }}
+                            </span>
+
+                        </div>
+
+                    </td>
+
+
+                    <td>
+
+                        <span class="badge badge-status">
+                            {{ email.draft_status }}
+                        </span>
+
+
+                        {% if email.draft_reply %}
+
+                            <br>
+
+
+                            <button
+                                type="button"
+                                class="draft-button"
+                                onclick="toggleDraft({{ loop.index }})">
+                                View Draft
+                            </button>
+
+
+                            <div
+                                id="draft-{{ loop.index }}"
+                                class="draft-box"
+                            >
+
+                                <strong>
+                                    Suggested Reply
+                                </strong>
+
+
+                                <textarea
+                                    id="reply-text-{{ loop.index }}"
+                                    class="reply-textarea"
+                                >{{ email.draft_reply }}</textarea>
+
+
+                                <div class="reply-actions">
+
+
+                                    <form
+                                        method="POST"
+                                        action="{{ url_for('save_draft') }}"
+                                        onsubmit="
+                                            document.getElementById(
+                                                'draft-hidden-{{ loop.index }}'
+                                            ).value =
+                                            document.getElementById(
+                                                'reply-text-{{ loop.index }}'
+                                            ).value;
+                                        "
+                                    >
+
+                                        <input
+                                            type="hidden"
+                                            name="message_id"
+                                            value="{{ email.id }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="reply_text"
+                                            id="draft-hidden-{{ loop.index }}"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="save-draft-button">
+                                            💾 Save Draft
+                                        </button>
+
+                                    </form>
+
+
+                                    <form
+                                        method="POST"
+                                        action="{{ url_for('send_reply') }}"
+                                        onsubmit="
+                                            document.getElementById(
+                                                'send-hidden-{{ loop.index }}'
+                                            ).value =
+                                            document.getElementById(
+                                                'reply-text-{{ loop.index }}'
+                                            ).value;
+
+                                            return confirm(
+                                                'Are you sure you want to send this reply?'
+                                            );
+                                        "
+                                    >
+
+                                        <input
+                                            type="hidden"
+                                            name="message_id"
+                                            value="{{ email.id }}"
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="reply_text"
+                                            id="send-hidden-{{ loop.index }}"
+                                        >
+
+                                        <button
+                                            type="submit"
+                                            class="send-reply-button">
+                                            📤 Send Reply
+                                        </button>
+
+                                    </form>
+
+                                </div>
+
+                            </div>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+
+    {% elif gmail_connected %}
+
+        <div style="
+            background:#fff8e1;
+            padding:25px;
+            border-radius:8px;
+        ">
+            No emails found.
+        </div>
+
+
+    {% else %}
+
+        <div style="
+            background:#f5f7ff;
+            padding:25px;
+            border-radius:8px;
+        ">
+
+            <p>
+                Connect your Gmail account to continue.
+            </p>
+
+            <a
+                href="{{ url_for('connect_gmail') }}"
+                class="refresh-button">
+                Connect Gmail
+            </a>
+
+        </div>
+
+    {% endif %}
+
+</main>
+
+<!-- =========================================================
+     GEMINI CHATBOT
+========================================================= -->
+
+<div id="geminiChat" class="gemini-chat">
+
+    <div class="gemini-chat-header">
+
+        <div class="gemini-chat-title">
+
+            <div class="gemini-chat-icon">
+                🤖
+            </div>
+
+            <div>
+                <div class="gemini-chat-name">
+                    Gemini Assistant
+                </div>
+
+                <div class="gemini-chat-status">
+                    Gmail & Calendar Assistant
+                </div>
+            </div>
+
+        </div>
+
+        <button
+            type="button"
+            class="gemini-close"
+            onclick="toggleGeminiChat()">
+            ×
+        </button>
+
+    </div>
+
+
+    <div
+        id="geminiMessages"
+        class="gemini-messages">
+
+        <div class="gemini-message assistant">
+
+            <div class="gemini-bubble">
+                Hi! 👋
+
+I can help you with your Gmail emails, upcoming meetings, calendar events and reminders.
+
+You can also ask me normal questions.
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div
+        id="geminiThinking"
+        class="gemini-thinking">
+        Gemini is thinking...
+    </div>
+
+
+    <div class="gemini-input-area">
+
+        <input
+            id="geminiInput"
+            class="gemini-input"
+            type="text"
+            maxlength="1000"
+            placeholder="Ask me anything..."
+            autocomplete="off"
+        >
+
+        <button
+            id="geminiSend"
+            class="gemini-send"
+            type="button"
+            onclick="sendGeminiMessage()">
+            ➤
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- Floating chatbot button -->
+
+<button
+    id="geminiChatButton"
+    class="gemini-chat-button"
+    type="button"
+    onclick="toggleGeminiChat()">
+    💬
+</button>
+
+<script>
+
+let currentFilter = "all";
+
+
+function toggleDraft(index) {
+
+    const draftBox = document.getElementById(
+        "draft-" + index
+    );
+
+    if (!draftBox) {
+        return;
+    }
+
+    if (draftBox.style.display === "block") {
+        draftBox.style.display = "none";
+    } else {
+        draftBox.style.display = "block";
+    }
+}
+
+
+function setFilter(filter, button) {
+
+    currentFilter = filter;
+
+    document
+        .querySelectorAll(".filter-button")
+        .forEach(function(btn) {
+            btn.classList.remove("active");
+        });
+
+    button.classList.add("active");
+
+    filterEmails();
+}
+
+
+function filterEmails() {
+
+    const searchInput =
+        document.getElementById("searchInput");
+
+    const searchText =
+        searchInput.value.toLowerCase().trim();
+
+    const rows =
+        document.querySelectorAll(".email-row");
+
+
+    rows.forEach(function(row) {
+
+        const rowText =
+            row.innerText.toLowerCase();
+
+        const important =
+            row.dataset.important === "true";
+
+        const meeting =
+            row.dataset.meeting === "true";
+
+
+        let filterMatch = true;
+
+
+        if (currentFilter === "important") {
+
+            filterMatch = important;
+
+        } else if (currentFilter === "meeting") {
+
+            filterMatch = meeting;
+
+        } else if (currentFilter === "normal") {
+
+            filterMatch = !important;
+
+        }
+
+
+        const searchMatch =
+            rowText.includes(searchText);
+
+
+        if (filterMatch && searchMatch) {
+
+            row.style.display = "";
+
+        } else {
+
+            row.style.display = "none";
+
+        }
+
+    });
+}
+
+/* =========================================================
+   GEMINI CHATBOT
+========================================================= */
+
+const geminiChat =
+    document.getElementById("geminiChat");
+
+const geminiInput =
+    document.getElementById("geminiInput");
+
+const geminiMessages =
+    document.getElementById("geminiMessages");
+
+const geminiThinking =
+    document.getElementById("geminiThinking");
+
+const geminiSend =
+    document.getElementById("geminiSend");
+
+let geminiHistory = [];
+
+
+/* OPEN / CLOSE CHAT */
+
+function toggleGeminiChat() {
+
+    if (geminiChat.style.display === "flex") {
+
+        geminiChat.style.display = "none";
+
+    } else {
+
+        geminiChat.style.display = "flex";
+
+        setTimeout(function() {
+            geminiInput.focus();
+        }, 100);
+    }
+}
+
+
+/* ADD MESSAGE */
+
+function addGeminiMessage(role, text) {
+
+    const wrapper =
+        document.createElement("div");
+
+    wrapper.className =
+        "gemini-message " + role;
+
+    const bubble =
+        document.createElement("div");
+
+    bubble.className =
+        "gemini-bubble";
+
+    bubble.textContent = text;
+
+    wrapper.appendChild(bubble);
+
+    geminiMessages.appendChild(wrapper);
+
+    geminiMessages.scrollTop =
+        geminiMessages.scrollHeight;
+}
+
+
+/* SEND MESSAGE */
+
+async function sendGeminiMessage() {
+
+    const message =
+        geminiInput.value.trim();
+
+    if (!message) {
+        return;
+    }
+
+    addGeminiMessage(
+        "user",
+        message
+    );
+
+    geminiInput.value = "";
+
+    geminiInput.disabled = true;
+    geminiSend.disabled = true;
+
+    geminiThinking.style.display = "block";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/assistant/chat",
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        message: message,
+                        history: geminiHistory
+                    })
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Assistant request failed."
+            );
+        }
+
+
+        const reply =
+            data.reply ||
+            "Sorry, I couldn't generate a response.";
+
+
+        addGeminiMessage(
+            "assistant",
+            reply
+        );
+
+
+        geminiHistory.push({
+            role: "user",
+            content: message
+        });
+
+        geminiHistory.push({
+            role: "assistant",
+            content: reply
+        });
+
+
+        if (geminiHistory.length > 20) {
+
+            geminiHistory =
+                geminiHistory.slice(-20);
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "Gemini chatbot error:",
+            error
+        );
+
+        addGeminiMessage(
+            "assistant",
+            "Sorry bhai, assistant se response nahi aa paaya. Server terminal check karo."
+        );
+
+    } finally {
+
+        geminiThinking.style.display = "none";
+
+        geminiInput.disabled = false;
+        geminiSend.disabled = false;
+
+        geminiInput.focus();
+    }
+}
+
+
+/* ENTER KEY */
+
+geminiInput.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "Enter" &&
+            !event.shiftKey
+        ) {
+
+            event.preventDefault();
+
+            sendGeminiMessage();
+        }
+    }
+);
+
+</script>
+
+
+</body>
+
+</html>

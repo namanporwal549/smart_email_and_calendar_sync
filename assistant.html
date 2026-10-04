@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI Assistant</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f7fb;
+        }
+
+        /* =====================================================
+           FLOATING BUTTON
+        ===================================================== */
+
+        .chat-button {
+            position: fixed;
+            right: 25px;
+            bottom: 25px;
+
+            width: 62px;
+            height: 62px;
+
+            border: none;
+            border-radius: 50%;
+
+            background: #4285f4;
+            color: white;
+
+            font-size: 28px;
+            cursor: pointer;
+
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+
+            z-index: 9999;
+        }
+
+        .chat-button:hover {
+            transform: scale(1.05);
+        }
+
+
+        /* =====================================================
+           CHAT WINDOW
+        ===================================================== */
+
+        .chat-container {
+            position: fixed;
+
+            right: 25px;
+            bottom: 100px;
+
+            width: 390px;
+            height: 570px;
+
+            background: white;
+
+            border-radius: 18px;
+
+            box-shadow:
+                0 15px 45px rgba(0, 0, 0, 0.22);
+
+            display: none;
+
+            flex-direction: column;
+
+            overflow: hidden;
+
+            z-index: 9998;
+        }
+
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+
+        .chat-header {
+            background: #4285f4;
+            color: white;
+
+            padding: 18px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-title-icon {
+            font-size: 25px;
+        }
+
+        .chat-title-text {
+            font-size: 17px;
+            font-weight: bold;
+        }
+
+        .chat-status {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 3px;
+        }
+
+        .close-button {
+            border: none;
+            background: transparent;
+            color: white;
+
+            font-size: 24px;
+
+            cursor: pointer;
+        }
+
+
+        /* =====================================================
+           MESSAGES
+        ===================================================== */
+
+        .messages {
+            flex: 1;
+
+            padding: 18px;
+
+            overflow-y: auto;
+
+            background: #f8f9fc;
+        }
+
+        .message {
+            display: flex;
+
+            margin-bottom: 14px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.assistant {
+            justify-content: flex-start;
+        }
+
+        .bubble {
+            max-width: 82%;
+
+            padding: 11px 14px;
+
+            border-radius: 15px;
+
+            line-height: 1.45;
+
+            font-size: 14px;
+
+            white-space: pre-wrap;
+
+            word-wrap: break-word;
+        }
+
+        .user .bubble {
+            background: #4285f4;
+            color: white;
+
+            border-bottom-right-radius: 4px;
+        }
+
+        .assistant .bubble {
+            background: white;
+            color: #222;
+
+            border: 1px solid #e5e7eb;
+
+            border-bottom-left-radius: 4px;
+        }
+
+
+        /* =====================================================
+           TYPING
+        ===================================================== */
+
+        .typing {
+            display: none;
+
+            padding: 0 18px 10px;
+
+            color: #777;
+
+            font-size: 13px;
+        }
+
+
+        /* =====================================================
+           INPUT
+        ===================================================== */
+
+        .chat-input-area {
+            display: flex;
+
+            gap: 8px;
+
+            padding: 12px;
+
+            background: white;
+
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .chat-input {
+            flex: 1;
+
+            border: 1px solid #d1d5db;
+
+            border-radius: 22px;
+
+            padding: 11px 15px;
+
+            outline: none;
+
+            font-size: 14px;
+        }
+
+        .chat-input:focus {
+            border-color: #4285f4;
+        }
+
+        .send-button {
+            width: 45px;
+            height: 45px;
+
+            border: none;
+
+            border-radius: 50%;
+
+            background: #4285f4;
+
+            color: white;
+
+            font-size: 18px;
+
+            cursor: pointer;
+        }
+
+        .send-button:disabled {
+            background: #aebbd0;
+            cursor: not-allowed;
+        }
+
+
+        /* =====================================================
+           MOBILE
+        ===================================================== */
+
+        @media (max-width: 600px) {
+
+            .chat-container {
+                right: 10px;
+                bottom: 85px;
+
+                width: calc(100vw - 20px);
+
+                height: 70vh;
+            }
+
+            .chat-button {
+                right: 15px;
+                bottom: 15px;
+            }
+        }
+    </style>
+</head>
+
+
+<body>
+
+
+<!-- =========================================================
+     CHAT WINDOW
+========================================================= -->
+
+<div class="chat-container" id="chatContainer">
+
+    <div class="chat-header">
+
+        <div class="chat-title">
+
+            <div class="chat-title-icon">
+                🤖
+            </div>
+
+            <div>
+                <div class="chat-title-text">
+                    Gemini Assistant
+                </div>
+
+                <div class="chat-status">
+                    Gmail & Calendar Assistant
+                </div>
+            </div>
+
+        </div>
+
+        <button
+            class="close-button"
+            onclick="toggleChat()"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <div
+        class="messages"
+        id="messages"
+    >
+
+        <div class="message assistant">
+
+            <div class="bubble">
+                Hi! 👋 I'm your Gemini assistant.
+
+I can help you with your Gmail emails, upcoming meetings, calendar events and reminders.
+
+You can also ask me normal questions.
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div
+        class="typing"
+        id="typing"
+    >
+        Gemini is thinking...
+    </div>
+
+
+    <div class="chat-input-area">
+
+        <input
+            type="text"
+            id="chatInput"
+            class="chat-input"
+            placeholder="Ask me anything..."
+            maxlength="1000"
+            autocomplete="off"
+        >
+
+        <button
+            id="sendButton"
+            class="send-button"
+            onclick="sendMessage()"
+        >
+            ➤
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     FLOATING CHAT BUTTON
+========================================================= -->
+
+<button
+    class="chat-button"
+    id="chatButton"
+    onclick="toggleChat()"
+>
+    💬
+</button>
+
+
+<script>
+
+    const chatContainer =
+        document.getElementById("chatContainer");
+
+    const chatInput =
+        document.getElementById("chatInput");
+
+    const messages =
+        document.getElementById("messages");
+
+    const typing =
+        document.getElementById("typing");
+
+    const sendButton =
+        document.getElementById("sendButton");
+
+
+    // Store conversation history
+    let history = [];
+
+
+    // ========================================================
+    // OPEN / CLOSE CHAT
+    // ========================================================
+
+    function toggleChat() {
+
+        if (chatContainer.style.display === "flex") {
+
+            chatContainer.style.display = "none";
+
+        } else {
+
+            chatContainer.style.display = "flex";
+
+            setTimeout(() => {
+                chatInput.focus();
+            }, 100);
+        }
+    }
+
+
+    // ========================================================
+    // ADD MESSAGE
+    // ========================================================
+
+    function addMessage(role, text) {
+
+        const wrapper =
+            document.createElement("div");
+
+        wrapper.className =
+            "message " + role;
+
+
+        const bubble =
+            document.createElement("div");
+
+        bubble.className =
+            "bubble";
+
+        bubble.textContent = text;
+
+
+        wrapper.appendChild(bubble);
+
+        messages.appendChild(wrapper);
+
+
+        messages.scrollTop =
+            messages.scrollHeight;
+    }
+
+
+    // ========================================================
+    // SEND MESSAGE
+    // ========================================================
+
+    async function sendMessage() {
+
+        const message =
+            chatInput.value.trim();
+
+
+        if (!message) {
+            return;
+        }
+
+
+        // Display user message
+        addMessage(
+            "user",
+            message
+        );
+
+
+        // Clear input
+        chatInput.value = "";
+
+
+        // Disable input
+        chatInput.disabled = true;
+        sendButton.disabled = true;
+
+
+        // Show typing
+        typing.style.display = "block";
+
+
+        try {
+
+            const response =
+                await fetch("/assistant/chat", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        message: message,
+
+                        history: history
+
+                    })
+
+                });
+
+
+            const data =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.error ||
+                    "Assistant request failed."
+                );
+            }
+
+
+            const reply =
+                data.reply ||
+                "I couldn't generate a response.";
+
+
+            // Display Gemini response
+            addMessage(
+                "assistant",
+                reply
+            );
+
+
+            // Save history
+            history.push({
+                role: "user",
+                content: message
+            });
+
+            history.push({
+                role: "assistant",
+                content: reply
+            });
+
+
+            // Keep only latest 20 messages
+            if (history.length > 20) {
+
+                history =
+                    history.slice(-20);
+            }
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            addMessage(
+                "assistant",
+                "Sorry bhai, assistant se response nahi aa paaya. Server terminal check karo."
+            );
+
+        } finally {
+
+            typing.style.display = "none";
+
+            chatInput.disabled = false;
+            sendButton.disabled = false;
+
+            chatInput.focus();
+        }
+    }
+
+
+    // ========================================================
+    // ENTER TO SEND
+    // ========================================================
+
+    chatInput.addEventListener(
+        "keydown",
+        function(event) {
+
+            if (
+                event.key === "Enter" &&
+                !event.shiftKey
+            ) {
+
+                event.preventDefault();
+
+                sendMessage();
+            }
+        }
+    );
+
+</script>
+
+</body>
+</html>
